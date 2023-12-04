@@ -1,6 +1,7 @@
 # qs8: Birduo's Quantum Statevector Simulator
 
 import numpy as np
+import random
 from icecream import ic
 
 # basic gate init for easy access
@@ -35,10 +36,9 @@ class QCirc:
         self.qubits = qubits
         # state will be array stored in [2*qb#:2*(qb#+1)] format
         # that will splice the correct part of the statevector
-        # self._state = np.eye(2**qubits, dtype=complex)
         self._state = np.append(np.ones(1), np.zeros(((2**qubits)-1, 1)))
-        self._state[0] = 1
         self._circuit = []
+        self._circ_mat = np.eye(2**qubits, dtype=complex) # circuit matrix
 
     # adds the gate to the proper column in the gates list
     def set_gate(self, gate: np.ndarray, qubits: list[int], column: int):
@@ -107,18 +107,46 @@ class QCirc:
 
         return col_mat
 
+    def init_state(self, state=None):
+        if state is None:
+            self._state = np.append(np.ones(1), np.zeros(((2**self.qubits)-1, 1)))
+        else:
+            if state.shape[0] == 2**self.qubits:
+                self._state = state
+            else:
+                return None
+
     # evolve state by given column
     def _interpret_column(self, column: int):
         self._state = self._col_to_mat(column) @ self._state
 
     # public-facing portion of interpreting
     def interpret_circuit(self):
-        self._state = np.append(np.ones(1), np.zeros(((2**self.qubits)-1, 1)))
+        self.init_state()
+
         for col in range(len(self._circuit)):
             self._interpret_column(col)
 
+    # potential for renaming to transpile
+    def build_circuit_matrix(self):
+        if self.get_columns() < 1:
+            return ValueError
+        
+        for col in range(self.get_columns()):
+            mat = self._col_to_mat(col)
+            if col == 0:
+                self._circ_mat = mat
+            else:
+                try:
+                    self._circ_mat = self._circ_mat @ mat
+                except:
+                    raise ValueError("Something changed the col to mat type!")
+
     ## basic helper functions below ##
-    def get_columns(self):
+    def get_circuit_matrix(self):
+        return self._circ_mat
+
+    def get_columns(self) -> int:
         return len(self._circuit)
 
     def get_pr(self):
@@ -126,15 +154,61 @@ class QCirc:
 
     def get_sv(self):
         return self._state
+    
+    # similar to Vinny's implementation
+    # choose a random number and see if it lands
+    # between the given probabilities
+    def measure_pr(self):
+        choice = random.random()
 
-    def run_circuit(self, shots):
-        self.interpret_circuit()
+        pr = self.get_pr()
+        pr_cumsum = np.cumsum(pr)
+        
+        prev_pr = 0
+        for index, pr in enumerate(pr_cumsum):
+            if prev_pr <= choice <= pr:
+                return index
 
-        probs = self.get_pr()
+            prev_pr = pr
+        
+        return -1
 
-        bin_vals = []
+    # runs the circuit by the built circuit matrix
+    # initializes state as well !
+    # if shots are defined, then return counts
+    # output: (state, counts)
+    def run_circuit(self, state=None, build=False):
+        if state is None:
+            self.init_state()
+        else:
+            self.init_state(state)
 
-        # TODO: implement weighted random
+        if build:
+            self._circ_mat = self.build_circuit_matrix()
+
+        # evaluate state by circuit matrix
+        try:
+            self._state = self._state @ self._circ_mat
+        except:
+            raise ValueError
+
+    def get_counts(self, shots, dictionary=True):
+        if dictionary:
+            counts = {}
+        else:
+            counts = np.zeros((2**self.qubits))
+
+        for _ in range(shots):
+            out = self.measure_pr()
+            if dictionary:
+                if str(out) in counts:
+                    counts[str(out)] += 1
+                else:
+                    counts[str(out)] = 1
+
+            else: counts[out] += 1
+
+        return counts
     
     def __str__(self) -> str:
         circ = [""] * self.qubits * 2
@@ -188,16 +262,23 @@ class QCirc:
 
 # actual test code
 def main():
-    qc = QCirc(2)
+    qb = 4
+    qc = QCirc(qb)
+
+    # auto-ghz up to 13 qb
 
     qc.set_gate(X, [0], 0)
     qc.set_gate(H, [0], 1)
-    qc.set_gate(CX, [0, 1], 2)
 
-    pri = qc.get_pr()
-    qc.interpret_circuit()
-    prf = qc.get_pr()
-    ic(prf)
+    for n in range(qb-1):
+        qc.set_gate(CX, [n, n + 1], qc.get_columns() + 1)
+
+    qc.build_circuit_matrix()
+
+    qc.run_circuit()
+
+    counts = qc.get_counts(1000)
+    print(counts)
 
     print(str(qc))
 
