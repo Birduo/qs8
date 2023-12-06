@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import numpy as np
 import random
-from icecream import ic
 
 # basic gate init for easy access
 H = np.asarray([[1, 1], [1, -1]]) * 2**-.5
