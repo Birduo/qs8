@@ -1,7 +1,9 @@
+from __future__ import annotations
 # qs8: Birduo's Quantum Statevector Simulator
 
 import numpy as np
 import random
+from icecream import ic
 
 # basic gate init for easy access
 H = np.asarray([[1, 1], [1, -1]]) * 2**-.5
@@ -36,11 +38,13 @@ class QCirc:
         # state will be array stored in [2*qb#:2*(qb#+1)] format
         # that will splice the correct part of the statevector
         self._state = np.append(np.ones(1), np.zeros(((2**qubits)-1, 1)))
+        # making vertical below
+        # self._state = self._state.reshape((2**qubits, 1))
         self._circuit = []
         self._circ_mat = np.eye(2**qubits, dtype=complex) # circuit matrix
 
     # adds the gate to the proper column in the gates list
-    def set_gate(self, gate: np.ndarray, qubits, column: int):
+    def set_gate(self, gate: np.ndarray, qubits: list[int], column: int):
         if gate.shape[0] == 2**len(qubits):
             if len(qubits) == 0:
                 return None
@@ -126,7 +130,7 @@ class QCirc:
             self._interpret_column(col)
 
     # potential for renaming to transpile
-    def build_circuit_matrix(self):
+    def build_circuit(self):
         if self.get_columns() < 1:
             return ValueError
         
@@ -136,7 +140,7 @@ class QCirc:
                 self._circ_mat = mat
             else:
                 try:
-                    self._circ_mat = self._circ_mat @ mat
+                    self._circ_mat = mat @ self._circ_mat
                 except:
                     raise ValueError("Something changed the col to mat type!")
 
@@ -182,7 +186,7 @@ class QCirc:
             self.init_state(state)
 
         if build:
-            self._circ_mat = self.build_circuit_matrix()
+            self.build_circuit()
 
         # evaluate state by circuit matrix
         try:
@@ -260,16 +264,17 @@ class QCirc:
 
 # actual test code
 def main():
-    qb = 1
+    qb = 2
     qc = QCirc(qb)
 
     # auto-ghz up to 13 qb
 
-    qc.set_gate(Y, [0], 0)
+    qc.set_gate(X, [0], 0)
+    qc.set_gate(H, [0], 1)
+    qc.set_gate(CX, [0, 1], 2)
 
-    qc.build_circuit_matrix()
-
-    qc.run_circuit()
+    qc.run_circuit(build=True)
+    # qc.interpret_circuit()
 
     print(str(qc))
     print(qc.get_sv())
