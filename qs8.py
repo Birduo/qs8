@@ -2,7 +2,6 @@
 
 import numpy as np
 import random
-from icecream import ic
 
 # basic gate init for easy access
 H = np.asarray([[1, 1], [1, -1]]) * 2**-.5
@@ -44,7 +43,6 @@ class QCirc:
     def set_gate(self, gate: np.ndarray, qubits: list[int], column: int):
         if gate.shape[0] == 2**len(qubits):
             if len(qubits) == 0:
-                ic("Invalid qubit gate (Can't be empty list!)")
                 return None
             elif len(qubits) <= 0 or len(qubits) > self.qubits:
                 print("Qubit length out of range!")
