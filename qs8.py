@@ -148,7 +148,7 @@ class QCirc:
         return len(self._circuit)
 
     def get_pr(self):
-        return np.real(self._state**2)
+        return np.abs(self._state) ** 2
 
     def get_sv(self):
         return self._state
@@ -186,7 +186,7 @@ class QCirc:
 
         # evaluate state by circuit matrix
         try:
-            self._state = self._state @ self._circ_mat
+            self._state = self._circ_mat @ self._state
         except:
             raise ValueError
 
@@ -260,25 +260,19 @@ class QCirc:
 
 # actual test code
 def main():
-    qb = 4
+    qb = 1
     qc = QCirc(qb)
 
     # auto-ghz up to 13 qb
 
-    qc.set_gate(X, [0], 0)
-    qc.set_gate(H, [0], 1)
-
-    for n in range(qb-1):
-        qc.set_gate(CX, [n, n + 1], qc.get_columns() + 1)
+    qc.set_gate(Y, [0], 0)
 
     qc.build_circuit_matrix()
 
     qc.run_circuit()
 
-    counts = qc.get_counts(1000)
-    print(counts)
-
     print(str(qc))
+    print(qc.get_sv())
 
 if __name__ == "__main__":
     main()
