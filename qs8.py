@@ -40,7 +40,7 @@ class QCirc:
         self._circ_mat = np.eye(2**qubits, dtype=complex) # circuit matrix
 
     # adds the gate to the proper column in the gates list
-    def set_gate(self, gate: np.ndarray, qubits: list[int], column: int):
+    def set_gate(self, gate: np.ndarray, qubits, column: int):
         if gate.shape[0] == 2**len(qubits):
             if len(qubits) == 0:
                 return None
