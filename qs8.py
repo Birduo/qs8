@@ -51,6 +51,42 @@ class QCirc:
                 self._state = state
             else:
                 return None
+            
+    ## basic helper functions below ##
+    # gets the circuit matrix
+    def get_circuit_matrix(self):
+        return self._circ_mat
+
+    # returns # of columns
+    def get_columns(self) -> int:
+        return len(self._circuit)
+
+    # returns probabilities
+    def get_pr(self):
+        return np.abs(self._state) ** 2
+
+    # returns statevector
+    def get_sv(self):
+        return self._state
+    
+    # returns dictionary or arraylike of counts given current sv
+    def get_counts(self, shots, dictionary=True):
+        if dictionary:
+            counts = {}
+        else:
+            counts = np.zeros((2**self.qubits))
+
+        for _ in range(shots):
+            out = self.measure_pr()
+            if dictionary:
+                if str(out) in counts:
+                    counts[str(out)] += 1
+                else:
+                    counts[str(out)] = 1
+
+            else: counts[out] += 1
+
+        return counts
 
     # adds the gate to the proper column in the gates list
     def set_gate(self, gate: np.ndarray, qubits: list[int], column: int):
@@ -123,6 +159,7 @@ class QCirc:
         self._state = self._col_to_mat(column) @ self._state
 
     # public-facing portion of interpreting
+    # culmination of _col_to_mat and _interpret_column (above 2 fns)
     def interpret_circuit(self):
         self.init_state()
 
@@ -143,23 +180,6 @@ class QCirc:
                     self._circ_mat = mat @ self._circ_mat
                 except:
                     raise ValueError("Something changed the col to mat type!")
-
-    ## basic helper functions below ##
-    # gets the circuit matrix
-    def get_circuit_matrix(self):
-        return self._circ_mat
-
-    # returns # of columns
-    def get_columns(self) -> int:
-        return len(self._circuit)
-
-    # returns probabilities
-    def get_pr(self):
-        return np.abs(self._state) ** 2
-
-    # returns statevector
-    def get_sv(self):
-        return self._state
     
     # similar to Vinny's implementation
     # choose a random number and see if it lands
@@ -181,7 +201,6 @@ class QCirc:
 
     # runs the circuit by the built circuit matrix
     # initializes state as well !
-    # if shots are defined, then return counts
     # output: (state, counts)
     def run_circuit(self, state=None, build=False):
         if state is None:
@@ -196,26 +215,7 @@ class QCirc:
         try:
             self._state = self._circ_mat @ self._state
         except:
-            raise ValueError
-
-    # returns dictionary or arraylike of counts given current sv
-    def get_counts(self, shots, dictionary=True):
-        if dictionary:
-            counts = {}
-        else:
-            counts = np.zeros((2**self.qubits))
-
-        for _ in range(shots):
-            out = self.measure_pr()
-            if dictionary:
-                if str(out) in counts:
-                    counts[str(out)] += 1
-                else:
-                    counts[str(out)] = 1
-
-            else: counts[out] += 1
-
-        return counts
+            raise ValueError("Error evolving state!")
     
     # circuit drawing !
     def __str__(self) -> str:
