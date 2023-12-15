@@ -42,6 +42,16 @@ class QCirc:
         self._circuit = []
         self._circ_mat = np.eye(2**qubits, dtype=complex) # circuit matrix
 
+    # set a state to the arraylike if provided
+    def init_state(self, state=None):
+        if state is None:
+            self._state = np.append(np.ones(1), np.zeros(((2**self.qubits)-1, 1)))
+        else:
+            if state.shape[0] == 2**self.qubits:
+                self._state = state
+            else:
+                return None
+
     # adds the gate to the proper column in the gates list
     def set_gate(self, gate: np.ndarray, qubits: list[int], column: int):
         if gate.shape[0] == 2**len(qubits):
@@ -108,15 +118,6 @@ class QCirc:
 
         return col_mat
 
-    def init_state(self, state=None):
-        if state is None:
-            self._state = np.append(np.ones(1), np.zeros(((2**self.qubits)-1, 1)))
-        else:
-            if state.shape[0] == 2**self.qubits:
-                self._state = state
-            else:
-                return None
-
     # evolve state by given column
     def _interpret_column(self, column: int):
         self._state = self._col_to_mat(column) @ self._state
@@ -144,15 +145,19 @@ class QCirc:
                     raise ValueError("Something changed the col to mat type!")
 
     ## basic helper functions below ##
+    # gets the circuit matrix
     def get_circuit_matrix(self):
         return self._circ_mat
 
+    # returns # of columns
     def get_columns(self) -> int:
         return len(self._circuit)
 
+    # returns probabilities
     def get_pr(self):
         return np.abs(self._state) ** 2
 
+    # returns statevector
     def get_sv(self):
         return self._state
     
@@ -193,6 +198,7 @@ class QCirc:
         except:
             raise ValueError
 
+    # returns dictionary or arraylike of counts given current sv
     def get_counts(self, shots, dictionary=True):
         if dictionary:
             counts = {}
@@ -211,6 +217,7 @@ class QCirc:
 
         return counts
     
+    # circuit drawing !
     def __str__(self) -> str:
         circ = [""] * self.qubits * 2
 
@@ -260,23 +267,3 @@ class QCirc:
         out = "\n".join(circ)
         
         return out
-
-# actual test code
-def main():
-    qb = 2
-    qc = QCirc(qb)
-
-    # auto-ghz up to 13 qb
-
-    qc.set_gate(X, [0], 0)
-    qc.set_gate(H, [0], 1)
-    qc.set_gate(CX, [0, 1], 2)
-
-    qc.run_circuit(build=True)
-    # qc.interpret_circuit()
-
-    print(str(qc))
-    print(qc.get_sv())
-
-if __name__ == "__main__":
-    main()
